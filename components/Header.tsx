@@ -5,9 +5,9 @@ function Header() {
   return (
     <header className="relative p-16 text-center bg-[#FFF8E7]">
     <Link href='/' >
-                <h1 className="text-6xl font-bold text-indigo-900">FableMind AI</h1>
+                <h1 className="text-6xl font-bold text-indigo-900 italic">FableMind AI</h1>
                 <div className="flex justify-center space-x-5 text-3xl lg:text-5xl mt-2">
-                    <h2 className=" mt-2">Where <span className="bg-yellow-200 px-1 rounded">Imagination</span> Writes Itself</h2>
+                    <h2 className=" mt-2">Where <span className="bg-yellow-200 px-1 rounded italic">Imagination</span> Writes Itself</h2>
                 </div>
     </Link>
     <div className = "absolute -top-5 right-5 flex space-x-2">
