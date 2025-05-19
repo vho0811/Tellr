@@ -2,6 +2,34 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * Textarea Component
+ * 
+ * A customized textarea component with consistent styling across the application.
+ * This component extends the native HTML textarea with FableMind AI's design system.
+ * 
+ * Features:
+ * - Responsive design with tailored styling for different device sizes
+ * - Consistent focus and hover states
+ * - Support for validation states (valid/invalid)
+ * - Accessible design with proper ARIA attributes
+ * - Dark mode compatibility
+ * 
+ * @param props - Standard textarea props extended with:
+ *   - className: Additional CSS classes to apply to the textarea
+ * 
+ * @example
+ * ```tsx
+ * <Textarea 
+ *   placeholder="Write your story prompt here..."
+ *   value={storyPrompt}
+ *   onChange={e => setStoryPrompt(e.target.value)}
+ *   className="h-40"
+ * />
+ * ```
+ * 
+ * @returns A styled textarea element
+ */
 function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
   return (
     <textarea
