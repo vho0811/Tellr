@@ -4,6 +4,8 @@ import { useState } from "react"
 import { Button } from "./ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Textarea } from "./ui/textarea"
+import { Frame } from "@gptscript-ai/gptscript"
+import renderEventMessage from "@/lib/renderEventMessage"
 
 function StoryWriter() {
   const [story, setStory] = useState<string>("")
@@ -11,8 +13,9 @@ function StoryWriter() {
   const [runStarted, setRunStarted] = useState<boolean>(false)
   const [runFinished, setRunFinished] = useState<boolean | null>(null)
   const [progress, setProgress] = useState("")
-
+  const [events, setEvents] = useState<Frame[]>([])
   const [currentTool, setCurrentTool] = useState("")
+  const storiesPath = "public/stories"
   async function runScript(){
     setRunStarted(true)
     setRunFinished(false)
@@ -21,9 +24,74 @@ function StoryWriter() {
         headers: {
             "Content-Type": "application/json",
         },
-        body: JSON.stringify({story, pages})
+        body: JSON.stringify({story, pages, path: storiesPath})
     })
+        if(response.ok && response.body){
+            console.log("Response received")
+            const reader = response.body.getReader()
+            const decoder = new TextDecoder()
+
+            handleStream(reader, decoder)
+            
+        }
+        else{
+            setRunFinished(true)
+            setRunStarted(false)
+            console.error("Failed to start streaming")
+            
+        }
 }
+async function handleStream(reader: ReadableStreamDefaultReader<Uint8Array>, decoder: TextDecoder){
+    let result = ""
+    while(true){
+        const {done, value} = await reader.read()
+        if(done) break;
+        const chunk = decoder.decode(value, {stream: true})
+        const eventData = chunk
+        .split("\n\n")
+        .filter((line)=> line.startsWith("event:"))
+        .map((line)=> line.replace(/^event: /, ""))
+        eventData.forEach(data=>{
+            try{
+                const parsedData = JSON.parse(data);
+                if (parsedData.type === "callProgress"){
+                    if (Array.isArray(parsedData.output)) {
+                        const lastOutput = parsedData.output[parsedData.output.length - 1];
+                        if (typeof lastOutput === 'string') {
+                            setProgress(lastOutput);
+                        } else if (lastOutput) {
+                            setProgress(JSON.stringify(lastOutput));
+                        }
+                    } else if (typeof parsedData.output === 'string') {
+                        setProgress(parsedData.output);
+                    } else if (parsedData.output) {
+                        setProgress(JSON.stringify(parsedData.output));
+                    }
+                    
+                    if (parsedData.tool && parsedData.tool.description) {
+                        setCurrentTool(parsedData.tool.description);
+                    } else {
+                        setCurrentTool("");
+                    }
+                }
+                else if(parsedData.type === "callStart"){
+                    setCurrentTool(parsedData.tool?.description || "")
+                }
+                else if(parsedData.type === "runFinish"){
+                    setRunFinished(true)
+                    setRunStarted(false)
+                }
+                else{
+                    setEvents((prevEvents)=>[...prevEvents, parsedData])
+                }
+            }
+            catch(error){
+                console.error("Error parsing event data:", error)
+            }
+    })
+    }
+}
+
   return (
     <div className="flex flex-col p-10 container">
         <section className="flex-1 flex flex-col border border-[3px] border-[#D6C9F0]
@@ -57,7 +125,7 @@ function StoryWriter() {
         <div>
             {runFinished === null && (
                 <p className="italic text-center animate-pulse mr-5">
-                I’m waiting for you to <span className="font-semibold">Spin the Tale...</span>
+                I'm waiting for you to <span className="font-semibold">Spin the Tale...</span>
                 </p>
             )}
                 
@@ -76,6 +144,14 @@ function StoryWriter() {
                     </div>
                 )}
                 {/* Render Events ... */}
+                <div className= "space-y-5">
+                    {events.map((event: Frame, index) => (
+                        <div key={index}>
+                            <span className="mr-5">{">>"}</span>
+                            {renderEventMessage(event)}
+                        </div>
+                    ))}
+                </div>
                 {runStarted && (
                     <div>
                         <span className="mr-5 animate-in">
